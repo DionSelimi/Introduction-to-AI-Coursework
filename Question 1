@@ -1,0 +1,82 @@
+# Import necessary libraries
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.datasets import fetch_california_housing
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import SGDRegressor
+from sklearn.metrics import mean_squared_error
+
+# Task 1: Load and Explore the Data
+# Fetch the California housing dataset
+housing_data = fetch_california_housing()
+X = housing_data.data[:, 0].reshape(-1, 1)  # Use only the MedInc feature
+y = housing_data.target  # MedHouseVal
+
+# Create a scatter plot to visualize the relationship between MedInc and MedHouseVal
+plt.figure(figsize=(10, 6))
+plt.scatter(X, y, alpha=0.5, color='blue')
+plt.title('Relationship Between Median Income and Median House Value')
+plt.xlabel('Median Income (in $10,000s)')
+plt.ylabel('Median House Value (in $100,000s)')
+plt.grid(True)
+plt.show()
+
+# Calculate and display summary statistics for MedInc and MedHouseVal
+mean_income, median_income, std_income = np.mean(X), np.median(X), np.std(X)
+mean_value, median_value, std_value = np.mean(y), np.median(y), np.std(y)
+
+print(f"Median Income - Mean: {mean_income:.2f}, Median: {median_income:.2f}, Std Dev: {std_income:.2f}")
+print(f"Median House Value - Mean: {mean_value:.2f}, Median: {median_value:.2f}, Std Dev: {std_value:.2f}")
+
+# Task 2: Preprocess the Data
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize the MedInc feature (optional but recommended for gradient descent)
+scaler = StandardScaler()
+X_train_std = scaler.fit_transform(X_train)
+X_test_std = scaler.transform(X_test)
+
+# Task 3: Build a Linear Regression Model
+# Train a linear regression model using Batch Gradient Descent
+batch_gradient_descent = SGDRegressor(max_iter=1000, learning_rate='constant', eta0=0.01, random_state=42)
+batch_gradient_descent.fit(X_train_std, y_train)
+
+# Train a linear regression model using Stochastic Gradient Descent
+stochastic_gradient_descent = SGDRegressor(max_iter=5000, learning_rate='invscaling', eta0=0.01, random_state=42)
+stochastic_gradient_descent.fit(X_train_std, y_train)
+
+# Task 4: Make Predictions
+# Predict house values for the test set
+y_pred_batch = batch_gradient_descent.predict(X_test_std)
+y_pred_sgd = stochastic_gradient_descent.predict(X_test_std)
+
+# Predict the house value for a district with a median income of $80,000 (MedInc = 8.0)
+sample_input = np.array([[8.0]])
+sample_input_std = scaler.transform(sample_input)
+predicted_value_batch = batch_gradient_descent.predict(sample_input_std)
+predicted_value_sgd = stochastic_gradient_descent.predict(sample_input_std)
+
+print(f"Predicted Median House Value (Batch GD) for MedInc = 8.0: {predicted_value_batch[0]:.2f}")
+print(f"Predicted Median House Value (SGD) for MedInc = 8.0: {predicted_value_sgd[0]:.2f}")
+
+# Task 6: Visualize the Results
+# Plot the regression lines overlaid on the test data scatter plot
+plt.figure(figsize=(10, 6))
+plt.scatter(X_test, y_test, alpha=0.5, label='Test Data Points', color='blue')
+plt.plot(X_test, y_pred_batch, color='red', label='Batch Gradient Descent')
+plt.plot(X_test, y_pred_sgd, color='green', label='Stochastic Gradient Descent')
+plt.title('Median Income vs. Median House Value with Regression Lines')
+plt.xlabel('Median Income (in $10,000s)')
+plt.ylabel('Median House Value (in $100,000s)')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Evaluate the model's performance using Mean Squared Error
+mse_batch = mean_squared_error(y_test, y_pred_batch)
+mse_sgd = mean_squared_error(y_test, y_pred_sgd)
+
+print(f"Mean Squared Error (Batch Gradient Descent): {mse_batch:.2f}")
+print(f"Mean Squared Error (Stochastic Gradient Descent): {mse_sgd:.2f}")
