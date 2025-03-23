@@ -1,3 +1,4 @@
+# Import all the needed libraries
 import os
 import zipfile
 import requests
@@ -12,12 +13,11 @@ from sklearn.metrics import confusion_matrix, classification_report, accuracy_sc
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-# --- 1. DOWNLOAD & EXTRACT DATASET ---
+# Download the dataset
 dataset_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/00240/UCI%20HAR%20Dataset.zip"
 zip_file_path = "UCI_HAR_Dataset.zip"
 extracted_folder = "UCI_HAR_Dataset"
 
-# Download dataset if not already present
 if not os.path.exists(zip_file_path):
     print("Downloading dataset...")
     response = requests.get(dataset_url, stream=True)
@@ -26,38 +26,33 @@ if not os.path.exists(zip_file_path):
             file.write(chunk)
     print("Download complete.")
 
-# Extract dataset if not already extracted
 if not os.path.exists(extracted_folder):
     print("Extracting dataset...")
     with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
         zip_ref.extractall(extracted_folder)
     print("Extraction complete.")
 
-# Locate the dataset folder
 for root, dirs, files in os.walk(extracted_folder):
     if "features.txt" in files:
         dataset_folder = root
         break
 print(f"Dataset found at: {dataset_folder}")
 
-# --- 2. LOAD FEATURES & ACTIVITY LABELS ---
 features_file = os.path.join(dataset_folder, "features.txt")
 activity_labels_file = os.path.join(dataset_folder, "activity_labels.txt")
 
-# Load feature names
 feature_list = pd.read_csv(features_file, sep=r"\s+", header=None, names=["index", "feature"])
 feature_list["feature"] = feature_list["feature"].astype(str)  # Ensure string type
 
-# Handle duplicate feature names
 if feature_list["feature"].duplicated().any():
     feature_list["feature"] += "_" + feature_list["index"].astype(str)
 feature_names = feature_list["feature"].tolist()
 
-# Load activity labels
+# activity labels
 activity_labels = pd.read_csv(activity_labels_file, sep=r"\s+", header=None, names=["index", "activity"])
 activity_mapping = dict(zip(activity_labels["index"], activity_labels["activity"]))
 
-# --- 3. LOAD TRAIN & TEST DATA ---
+# Train the data
 def load_dataset(split="train"):
     X_file = os.path.join(dataset_folder, split, f"X_{split}.txt")
     y_file = os.path.join(dataset_folder, split, f"y_{split}.txt")
@@ -80,7 +75,7 @@ X_test, y_test, test_subjects = load_dataset("test")
 y_train["Activity"] = y_train["Activity"].map(activity_mapping)
 y_test["Activity"] = y_test["Activity"].map(activity_mapping)
 
-# --- 4. CONVERT MULTI-CLASS TO BINARY (ACTIVE vs INACTIVE) ---
+# Binary Class
 def map_to_binary(activity):
     return 1 if activity in ["WALKING", "WALKING_UPSTAIRS", "WALKING_DOWNSTAIRS"] else 0
 
@@ -90,19 +85,19 @@ y_test["Binary"] = y_test["Activity"].apply(map_to_binary)
 y_train_binary = y_train["Binary"]
 y_test_binary = y_test["Binary"]
 
-# --- 5. PREPROCESSING: FEATURE SCALING & PCA ---
+# Feature scaling
 feature_scaler = StandardScaler()
 X_train_scaled = feature_scaler.fit_transform(X_train)
 X_test_scaled = feature_scaler.transform(X_test)
 
-# --- 6. TRAIN SVM MODEL WITH GRID SEARCH ---
+# Grid seach
 model_pipeline = Pipeline([
     ('scaler', StandardScaler()),
     ('pca', PCA(n_components=50)),  # Reduce features from 561 to 50
     ('svc', SVC(class_weight='balanced'))  # Handle class imbalance
 ])
 
-# Define hyperparameter grid for grid search
+# Hyperparameter for grid search
 hyperparameter_grid = [
     {'svc__kernel': ['linear'], 'svc__C': [0.1, 1, 10, 100]},
     {'svc__kernel': ['poly'], 'svc__C': [0.1, 1], 'svc__degree': [2, 3], 'svc__gamma': [0.001, 0.01, 0.1]},
@@ -124,7 +119,7 @@ grid_search.fit(X_train_scaled, y_train_binary)
 print("Best parameters:", grid_search.best_params_)
 print("Best cross-validation F1 score:", grid_search.best_score_)
 
-# --- 7. EVALUATE THE MODEL ---
+# Evaluating
 y_pred = grid_search.predict(X_test_scaled)
 
 # Confusion Matrix
