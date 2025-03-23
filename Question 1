@@ -1,4 +1,4 @@
-# Makue sure to import necessary libraries
+# Make sure to import necessary libraries
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.datasets import fetch_california_housing
